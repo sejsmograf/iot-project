@@ -1,24 +1,50 @@
 import paho.mqtt.client as mqtt
 import json
 import time
+from datetime import datetime
+from config import *  # pylint: disable=unused-wildcard-import
+from mfrc522 import MFRC522
 
-BROKER_HOST = "localhost"
+BROKER_HOST = "10.108.33.121"
 ZONE_NAME = "sauna"
 TOPIC_NAME = "auth/request"
 
+POOL_ZONE = 2
+SAUNA_ZONE = 3
+PLAYGROUND_ZONE = 4
+
+ZONE = SAUNA_ZONE
+
 client = mqtt.Client()
 
-def publish_data(topic_name, json_data):
-    client.publish(topic_name, json_data)
+executing = True
 
+def rfidRead():
+    global executing
+    MIFAREReader = MFRC522()
+    last_scan = datetime.timestamp(datetime.now()) - 3
+    while executing:
+        if datetime.timestamp(datetime.now()) - last_scan > 3.0:
+            (status, TagType) = MIFAREReader.MFRC522_Request(MIFAREReader.PICC_REQIDL)
+            if status == MIFAREReader.MI_OK:
+                (status, uid) = MIFAREReader.MFRC522_Anticoll()
+                if status == MIFAREReader.MI_OK:
+                    num = 0
+                    for i in range(0, len(uid)):
+                        num += uid[i] << (i*8)
+                    print(f"Card read UID: {num}")
+                    publish_data(TOPIC_NAME, ZONE, num)
+       
+                    last_scan = datetime.timestamp(datetime.now())
 
-def publish_mock_data(topic_name):
+def publish_data(topic_name, access_zone, card_id):
+
     json_data = json.dumps({
-        "cardId" : 10000000 
+        "accessZone" : access_zone,
+        "cardId" : card_id 
     })
 
-    publish_data(topic_name, json_data)
-    time.sleep(10)
+    client.publish(topic_name,  json_data)
 
 
 def connect_to_broker():
@@ -30,9 +56,7 @@ def disconnect_from_broker():
 def run_sender():
     connect_to_broker()
     try:
-        while True:
-            
-            publish_mock_data(TOPIC_NAME)
+        rfidRead()
     except KeyboardInterrupt:
         print("Ctrl+C received. Disconnecting from the broker and exiting.")
         disconnect_from_broker()
