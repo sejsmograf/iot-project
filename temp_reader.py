@@ -1,6 +1,8 @@
 from config import *
+import os
 import time
 import board
+import textwrap
 import busio
 import lib.oled.SSD1331 as SSD1331
 import adafruit_bme280.advanced as adafruit_bme280
@@ -18,6 +20,7 @@ class BME280Reader:
         self.bme280.overscan_pressure = adafruit_bme280.OVERSCAN_X16
         self.bme280.overscan_humidity = adafruit_bme280.OVERSCAN_X1
         self.bme280.overscan_temperature = adafruit_bme280.OVERSCAN_X2
+        os.system('sudo systemctl stop ip-oled.service')
 
     def get_temperature(self):
         return self.bme280.temperature
@@ -33,7 +36,7 @@ class OLEDWeatherDisplay:
         self.display.Init()
 
         self.image = Image.new(
-            "RGB", (self.disp.width, self.disp.height), "WHITE")
+            "RGB", (self.display.width, self.display.height), "WHITE")
         self.draw = ImageDraw.Draw(self.image)
         self.font_small = ImageFont.truetype("./lib/oled/Font.ttf", 10)
 
@@ -50,6 +53,15 @@ class OLEDWeatherDisplay:
         self.display.ShowImage(self.image, 0, 0)
 
 
-while True:
+    def display_text(self, text):
+        text = textwrap.fill(text, width=20)
+        self.draw.rectangle(
+            (0, 0, self.display.width, self.display.height), outline=0, fill=0)
+        self.draw.text((5, 5), f'{text}', font=self.font_small, fill="WHITE")
+
+        self.display.ShowImage(self.image, 0, 0)
+
+
+        
 
 
