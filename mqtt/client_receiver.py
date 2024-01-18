@@ -1,23 +1,27 @@
 import paho.mqtt.client as mqtt
 import json
-import sejsmo
 import time
 import threading
+import temp_reader
+from buzzer_led_handler import access_denied, access_granted
 
-BROKER_HOST = "localhost"
+BROKER_HOST = "10.108.33.121"
 ZONE_NAME = "sauna"
 TOPIC_NAME = "auth/response"
 
 client = mqtt.Client()
 
-display_refresh_interval = 1
+display_refresh_interval = 2
 display_paused = False
 
+
+weather_displayer = temp_reader.OLEDWeatherDisplay()
 
 def display_weather_data():
     while True:
         if not display_paused:
             print(f"Current time: {time.strftime('%H:%M:%S')}")
+            weather_displayer.display_weather_data()
         time.sleep(display_refresh_interval)
 
 
@@ -27,19 +31,28 @@ def process_message(client, userdata, message):
     global display_paused
 
     message_decoded = json.loads(message.payload)
-    print(f"RECEIVED AUTH: {message_decoded['authorized']}")
 
     # Tutaj logika w zalężoności czy autoryzacja udana czy nie,
     # jakieś buzzery etc
-    if message_decoded["authorized"] == True:
+    authorized = message_decoded["accessGranted"]
+    print(authorized)
+    message = message_decoded["message"]
+
+    if authorized is True:
         display_paused = True
-        print("Success")
-        time.sleep(5)
+        print(message)
+        weather_displayer.display_text(message)
+        access_granted()
+        time.sleep(2)
         display_paused = False
     else:
+        display_paused = True
+        print(message)
+        weather_displayer.display_text(message)
+        access_denied()
+        time.sleep(2)
         display_paused = False
-        print("Failure")
-
+ 
 
 def connect_to_broker():
     client.connect(BROKER_HOST)
