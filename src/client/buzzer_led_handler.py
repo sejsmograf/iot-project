@@ -31,7 +31,7 @@ def access_denied():
     for _ in range(3): 
             buzzer(True) 
             time.sleep(0.25)  
-            buzzer(True) 
+            buzzer(False) 
             time.sleep(0.25) 
 
     time.sleep(0.5);
