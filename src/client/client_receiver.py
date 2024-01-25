@@ -4,6 +4,7 @@ import time
 import threading
 import temp_reader
 from buzzer_led_handler import access_denied, access_granted
+from client_requester import ZONE
 
 BROKER_HOST = "10.108.33.121"
 ZONE_NAME = "sauna"
@@ -20,7 +21,6 @@ weather_displayer = temp_reader.OLEDWeatherDisplay()
 def display_weather_data():
     while True:
         if not display_paused:
-            print(f"Current time: {time.strftime('%H:%M:%S')}")
             weather_displayer.display_weather_data()
         time.sleep(display_refresh_interval)
 
@@ -31,6 +31,10 @@ def process_message(client, userdata, message):
     global display_paused
 
     message_decoded = json.loads(message.payload)
+    print(message_decoded)
+
+    if message_decoded["zoneId"] != ZONE:
+        return
 
     # Tutaj logika w zalężoności czy autoryzacja udana czy nie,
     # jakieś buzzery etc
@@ -43,14 +47,12 @@ def process_message(client, userdata, message):
         print(message)
         weather_displayer.display_text(message)
         access_granted()
-        time.sleep(2)
         display_paused = False
     else:
         display_paused = True
         print(message)
         weather_displayer.display_text(message)
         access_denied()
-        time.sleep(2)
         display_paused = False
  
 
